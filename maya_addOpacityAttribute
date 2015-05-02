@@ -1,0 +1,68 @@
+# Add transparency / alpha gain attribute
+# TODO: deletes animation on node and puts it on new attribute
+# TODO: check for pre-existing connections (shader assigned to more than one geo)
+# TODO: manage default value of opacity attribute
+
+import maya.cmds as cmds
+
+# removes unicode to make a clean string e.g. u['obj'] = 'obj'  
+def removeUnicode(selected):
+    selectedString = str(selected)
+    return selectedString[3:len(selected)-3]
+
+# gets connected shader from object
+def getShader(obj):
+    shapeRelative = cmds.listRelatives(obj, s = True)
+    shadingGroup = cmds.listConnections(shapeRelative, type='shadingEngine')
+    shader = cmds.listConnections(str(removeUnicode(shadingGroup)) + ".surfaceShader")
+    return removeUnicode(shader)
+
+# return transparency attribute with name
+def findOpacityAttribute(shader):
+    shaderTransparency = str(shader) + ".transparency"
+    if cmds.listConnections(shaderTransparency) == None:
+          return shaderTransparency
+    else:
+          # find transparency connection and return alpha gain attribute
+          transparencyInput = cmds.listConnections(shaderTransparency)
+          alphaGain = str(removeUnicode(transparencyInput)) + ".alphaGain"
+          return alphaGain
+
+# determines name of attribute to add based on shader input
+def defineAttributeName(shader):
+     if findOpacityAttribute(shader) == str(shader) + ".transparency":
+         return "transparency"
+     else:
+         return "alphaGain"
+
+# adds attribute to object
+def addAttribute(object):
+     defaultValue = 1
+     objectShader = getShader(object)
+     attrName = defineAttributeName(objectShader)
+     cmds.addAttr(object, longName = attrName, attributeType = 'float', dv = defaultValue, k = True )
+
+
+# function - connect to attribute
+def connectOpacityAttributes(object):
+     shader = getShader(object)    
+     if defineAttributeName(shader) == "transparency":
+         transparencyR = shader + ".transparencyR"
+         transparencyG = shader + ".transparencyG"
+         transparencyB = shader + ".transparencyB"
+         transparencyArray = [transparencyR, transparencyG, transparencyB]
+         for i in transparencyArray:
+             print "connecting " + i + " to " + newAttributeName
+             cmds.connectAttr(newAttributeName, i)
+     else:    
+          print "connecting " + opacityAttribute + " to " + newAttributeName      
+          return cmds.connectAttr(newAttributeName, opacityAttribute)
+
+selected = cmds.ls(sl=True)
+objectName = removeUnicode(selected)
+currentShader = getShader(objectName)
+opacityAttribute = findOpacityAttribute(currentShader)
+newAttributeName = objectName + "." + defineAttributeName(currentShader)
+
+addAttribute(objectName)
+connectOpacityAttributes(objectName)
